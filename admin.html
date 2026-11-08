@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>অ্যাডমিন প্যানেল</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #eef2f3; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input, textarea { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #34A853; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
+        button:hover { background: #2e8b57; }
+        .logout-btn { background: #db4437; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>অ্যাডমিন নোটিফিকেশন প্যানেল</h2>
+        
+        <div id="auth-section">
+            <button id="login-btn">অ্যাডমিন গুগল (Gmail) দিয়ে লগইন করুন</button>
+        </div>
+        
+        <div id="admin-panel" style="display:none;">
+            <p>অ্যাডমিন: <span id="admin-email"></span></p>
+            
+            <label>ইউজারের জিমেইল (যার কাছে পাঠাবেন):</label>
+            <input type="email" id="targetUserEmail" placeholder="user@gmail.com">
+
+            <label>নোটিফিকেশনের শিরোনাম:</label>
+            <input type="text" id="notiTitle" placeholder="যেমন: অর্ডার সফল হয়েছে">
+
+            <label>বিস্তারিত বার্তা:</label>
+            <textarea id="notiMessage" rows="4" placeholder="আপনার বার্তা এখানে লিখুন..."></textarea>
+
+            <button onclick="sendNotificationToUser()">ইউজারকে নোটিফিকেশন পাঠান</button>
+            <button id="logout-btn" class="logout-btn">লগআউট</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Modular Version) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+        /* ==========================================================
+           ⚠️ [১] নিচে আপনার ফায়ারবেস প্রজেক্টের কনফিগারেশন বসিয়ে দিন 
+           (ইউজার এবং অ্যাডমিন সাইটে একই কনফিগারেশন হবে) ⚠️
+           ========================================================== */
+        const firebaseConfig = {
+            apiKey: "AIzaSyBQXDEFuilbYDsry-ktqWylIzqgPZNbUWQ", authDomain: "mr-techlabe.firebaseapp.com", databaseURL: "https://mr-techlabe-default-rtdb.firebaseio.com", projectId: "mr-techlabe", storageBucket: "mr-techlabe.firebasestorage.app", messagingSenderId: "172436004844", appId: "1:172436004844:web:466012505fa13297eb2ac9", measurementId: "G-E64JT771TM"
+        };
+
+        // ফায়ারবেস ইনিশিয়ালাইজ
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const provider = new GoogleAuthProvider();
+
+        // অ্যাডমিন জিমেইল লগইন
+        document.getElementById('login-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch((error) => {
+                alert("লগইন ব্যর্থ হয়েছে: " + error.message);
+            });
+        });
+
+        // লগআউট
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // অথ স্টেট মনিটর
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                document.getElementById('admin-email').innerText = user.email;
+            } else {
+                document.getElementById('auth-section').style.display = 'block';
+                document.getElementById('admin-panel').style.display = 'none';
+            }
+        });
+
+        /* ==========================================================
+           ⚠️ [২] নোটিফিকেশন ডাটাবেসে পাঠানোর ফাংশন ⚠️
+           ========================================================== */
+        window.sendNotificationToUser = function() {
+            const rawEmail = document.getElementById('targetUserEmail').value.trim();
+            const title = document.getElementById('notiTitle').value.trim();
+            const message = document.getElementById('notiMessage').value.trim();
+
+            if (!rawEmail || !title || !message) {
+                alert("দয়া করে সব ফিল্ড পূরণ করুন!");
+                return;
+            }
+
+            // জিমেইলের ডট বা স্পেশাল ক্যারেক্টার ডাটাবেস পাথের জন্য মডিফাই করা
+            const targetUserKey = rawEmail.replace(/\./g, '_');
+
+            // রিয়েল-টাইম ডাটাবেসে নোটিফিকেশন সেভ করা
+            set(ref(db, 'notifications/' + targetUserKey), {
+                title: title,
+                message: message,
+                timestamp: Date.now()
+            }).then(() => {
+                alert("সফলভাবে ইউজারের কাছে নোটিফিকেশন পাঠানো হয়েছে!");
+                document.getElementById('notiTitle').value = '';
+                document.getElementById('notiMessage').value = '';
+            }).catch((error) => {
+                alert("ত্রুটি ঘটেছে: " + error.message);
+            });
+        }
+    </script>
+</body>
+</html>
