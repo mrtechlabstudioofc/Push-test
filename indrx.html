@@ -1,1 +1,104 @@
-b
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ইউজার ড্যাশবোর্ড</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .box { border: 1px solid #ddd; padding: 15px; margin-top: 15px; border-radius: 5px; background: #fafafa; }
+        button { background: #4285F4; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #357ae8; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>ইউজার প্যানেল</h2>
+        <div id="auth-section">
+            <button id="login-btn">গুগল (Gmail) দিয়ে লগইন করুন</button>
+        </div>
+        
+        <div id="user-info" style="display:none;">
+            <p>স্বাগতম, <span id="user-name"></span> (<span id="user-email"></span>)</p>
+            <button id="logout-btn" style="background: #db4437;">লগআউট</button>
+        </div>
+
+        <div class="box">
+            <h4>ইন-অ্যাপ নোটিফিকেশন:</h4>
+            <div id="notification-box">কোনো নতুন নোটিফিকেশন নেই।</div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Modular Version) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+        /* ==========================================================
+           ⚠️ [১] নিচে আপনার ফায়ারবেস প্রজেক্টের কনফিগারেশন বসিয়ে দিন ⚠️
+           ========================================================== */
+        const firebaseConfig = {
+            apiKey: "YOUR_FIREBASE_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        // ফায়ারবেস ইনিশিয়ালাইজ
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const provider = new GoogleAuthProvider();
+
+        // জিমেইল লগইন বাটন হ্যান্ডেল
+        document.getElementById('login-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch((error) => {
+                alert("লগইন ব্যর্থ হয়েছে: " + error.message);
+            });
+        });
+
+        // লগআউট বাটন হ্যান্ডেল
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // ইউজারের অথ স্টেট চেক করা
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // ইউজার লগইন করা থাকলে
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('user-name').innerText = user.displayName;
+                document.getElementById('user-email').innerText = user.email;
+
+                // ইউজারের নিজস্ব ইউনিক আইডি দিয়ে ডেটাবেস থেকে নোটিফিকেশন রিড করা
+                const sanitizedEmail = user.email.replace(/\./g, '_'); // ডাটাবেস കീ ঠিক রাখার জন্য
+                const notificationRef = ref(db, 'notifications/' + sanitizedEmail);
+
+                onValue(notificationRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        document.getElementById('notification-box').innerHTML = 
+                            `<strong>${data.title}</strong><p>${data.message}</p><small>${new Date(data.timestamp).toLocaleString()}</small>`;
+                        
+                        // ব্রাউজার অ্যালার্ট বা সাউন্ড দিতে পারেন
+                        alert("নতুন নোটিফিকেশন এসেছে: " + data.title);
+                    }
+                });
+
+            } else {
+                // ইউজার লগআউট অবস্থায় থাকলে
+                document.getElementById('auth-section').style.display = 'block';
+                document.getElementById('user-info').style.display = 'none';
+                document.getElementById('notification-box').innerHTML = "লগইন করুন নোটিফিকেশন দেখার জন্য।";
+            }
+        });
+    </script>
+</body>
+</html>
