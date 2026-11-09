@@ -63,6 +63,17 @@
         const db = getDatabase(app);
         const messaging = getMessaging(app);
 
+        // সার্ভিস ওয়ার্কার রেজিস্টার করা (এটি ব্রাউজারকে ব্যাকগ্রাউন্ড মেসেজিংয়ের জন্য প্রস্তুত করে)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                .then((registration) => {
+                    console.log('Service Worker registered successfully with scope:', registration.scope);
+                })
+                .catch((err) => {
+                    console.log('Service Worker registration failed:', err);
+                });
+        }
+
         // লগইন হ্যান্ডেল
         document.getElementById('login-btn').addEventListener('click', () => {
             const email = document.getElementById('loginEmail').value.trim();
