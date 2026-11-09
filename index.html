@@ -87,8 +87,21 @@
         document.getElementById('notif-perm-btn').addEventListener('click', () => {
             Notification.requestPermission().then((permission) => {
                 if (permission === 'granted') {
-                    alert('নোটিফিকেশন পারমিশন দেওয়া হয়েছে!');
-                    // এখানে VAPID Key ব্যবহার করে টোকেন নেওয়া যায় (প্রয়োজন সাপেক্ষে)
+                    // VAPID Key দিয়ে পুশ নোটিফিকেশন টোকেন সংগ্রহ করা হচ্ছে
+                    getToken(messaging, { 
+                        vapidKey: 'BJXmr5K0psOK19iiFx2alpYxOlJztTNxqEWLexOr7LOg4b4inIQN3zbaFArw8l7TWoqezeotx-3fJ_7mqUMaaMY' 
+                    }).then((currentToken) => {
+                        if (currentToken) {
+                            console.log('FCM Token:', currentToken);
+                            alert('নোটিফিকেশন পারমিশন সফলভাবে দেওয়া হয়েছে!');
+                            // চাইলে এই টোকেনটি ডাটাবেসে সেভ করে রাখতে পারেন
+                        } else {
+                            console.log('No registration token available.');
+                        }
+                    }).catch((err) => {
+                        console.log('An error occurred while retrieving token. ', err);
+                        alert('টোকেন সংগ্রহ করতে সমস্যা হয়েছে।');
+                    });
                 } else {
                     alert('পারমিশন দেওয়া হয়নি!');
                 }
