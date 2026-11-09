@@ -18,7 +18,7 @@
     <div class="container">
         <h2>অ্যাডমিন নোটিফিকেশন প্যানেল</h2>
         
-        <!-- অ্যাডমিন লগইন সেকশন -->
+        <!-- লগইন সেকশন -->
         <div id="auth-section">
             <h3>অ্যাডমিন লগইন</h3>
             <input type="email" id="adminEmail" placeholder="অ্যাডমিন ইমেইল দিন">
@@ -26,21 +26,21 @@
             <button id="login-btn">অ্যাডমিন লগইন</button>
         </div>
         
-        <!-- অ্যাডমিন প্যানেল ড্যাশবোর্ড -->
+        <!-- ড্যাশবোর্ড -->
         <div id="admin-panel" style="display:none;">
             <p>লগইনকৃত অ্যাডমিন: <span id="admin-email-display"></span></p>
             <hr>
             
-            <label>ইউজারের ইমেইল (যার কাছে পাঠাবেন):</label>
+            <label>ইউজারের ইমেইল:</label>
             <input type="email" id="targetUserEmail" placeholder="user@gmail.com">
 
-            <label>নোটিফিকেশনের শিরোনাম:</label>
-            <input type="text" id="notiTitle" placeholder="যেমন: আপডেট নোটিশ">
+            <label>শিরোনাম:</label>
+            <input type="text" id="notiTitle" placeholder="নোটিশের শিরোনাম">
 
-            <label>বিস্তারিত বার্তা:</label>
-            <textarea id="notiMessage" rows="4" placeholder="আপনার বার্তা এখানে লিখুন..."></textarea>
+            <label>বার্তা:</label>
+            <textarea id="notiMessage" rows="4" placeholder="বিস্তারিত বার্তা..."></textarea>
 
-            <button onclick="sendNotificationToUser()">ইউজারকে নোটিফিকেশন পাঠান</button>
+            <button onclick="sendNotificationToUser()">নোটিফিকেশন পাঠান</button>
             <button id="logout-btn" class="logout-btn">লগআউট</button>
         </div>
     </div>
@@ -51,9 +51,6 @@
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
         import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-        /* ==========================================================
-           ⚠️ আপনার ফায়ারবেস প্রজেক্টের আসল কনফিগারেশন ⚠️
-           ========================================================== */
         const firebaseConfig = {
             apiKey: "AIzaSyBQXDEFuilbYDsry-ktqWylIzqgPZNbUWQ",
             authDomain: "mr-techlabe.firebaseapp.com",
@@ -65,36 +62,31 @@
             measurementId: "G-E64JT771TM"
         };
 
-        // ফায়ারবেস ইনিশিয়ালাইজ
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // অ্যাডমিন লগইন হ্যান্ডেল
+        // অ্যাডমিন লগইন
         document.getElementById('login-btn').addEventListener('click', () => {
             const email = document.getElementById('adminEmail').value.trim();
             const password = document.getElementById('adminPassword').value.trim();
 
             if (!email || !password) {
-                alert("দয়া করে ইমেইল এবং পাসওয়ার্ড দিন!");
+                alert("সব ফিল্ড পূরণ করুন!");
                 return;
             }
 
             signInWithEmailAndPassword(auth, email, password)
-                .then(() => {
-                    alert("অ্যাডমিন সফলভাবে লগইন হয়েছে!");
-                })
-                .catch((error) => {
-                    alert("লগইন ব্যর্থ হয়েছে: " + error.message);
-                });
+                .then(() => { alert("লগইন সফল!"); })
+                .catch((error) => { alert("ত্রুটি: " + error.message); });
         });
 
-        // লগআউট হ্যান্ডেল
+        // লগআউট
         document.getElementById('logout-btn').addEventListener('click', () => {
             signOut(auth);
         });
 
-        // অথ স্টেট মনিটর
+        // অথ স্টেট
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('auth-section').style.display = 'none';
@@ -106,34 +98,30 @@
             }
         });
 
-        /* ==========================================================
-           ⚠️ নোটিফিকেশন ডাটাবেসে পাঠানোর ফাংশন ⚠️
-           ========================================================== */
+        // নোটিফিকেশন পাঠানোর ফাংশন
         window.sendNotificationToUser = function() {
             const rawEmail = document.getElementById('targetUserEmail').value.trim();
             const title = document.getElementById('notiTitle').value.trim();
             const message = document.getElementById('notiMessage').value.trim();
 
             if (!rawEmail || !title || !message) {
-                alert("দয়া করে সব ফিল্ড সঠিকভাবে পূরণ করুন!");
+                alert("সব ফিল্ড পূরণ করুন!");
                 return;
             }
 
-            // ডাটাবেস পাথের জন্য ইমেইলের ডট রিমুভ করে আন্ডারস্কোর দেওয়া
             const targetUserKey = rawEmail.replace(/\./g, '_');
 
-            // রিয়েল-টাইম ডাটাবেসে নোটিফিকেশন সেভ করা
             set(ref(db, 'notifications/' + targetUserKey), {
                 title: title,
                 message: message,
                 timestamp: Date.now()
             }).then(() => {
-                alert("সফলভাবে ইউজারের কাছে নোটিফিকেশন পাঠানো হয়েছে!");
+                alert("নোটিফিকেশন সফলভাবে পাঠানো হয়েছে!");
                 document.getElementById('targetUserEmail').value = '';
                 document.getElementById('notiTitle').value = '';
                 document.getElementById('notiMessage').value = '';
             }).catch((error) => {
-                alert("ত্রুটি ঘটেছে: " + error.message);
+                alert("ত্রুটি: " + error.message);
             });
         }
     </script>
